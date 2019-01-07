@@ -1,0 +1,102 @@
+﻿@model IEnumerable<NameAPI.Models.NameModel>
+
+@{
+    ViewBag.Title = "Name Service";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>People</h2>
+@using (Html.BeginForm("UpdateRequest", "Service", FormMethod.Post, new { name = "postForm", id = "postForm" }))
+{
+    <div class="form-group">
+        @Html.Label("nameType", "Name Type")<br />
+        @Html.DropDownList("nameType", EnumHelper.GetSelectList(typeof(NameAPI.Models.NameType)), "Select Name Type")
+    </div>
+    <div class="form-group">
+        @Html.Label("nameGender", "Gender")<br />
+        @Html.DropDownList("nameGender", EnumHelper.GetSelectList(typeof(NameAPI.Models.NameGender)), "Select Gender Type")
+    </div>
+    <div class="form-group">
+        @Html.Label("limit", "Limit")<br />
+        <input type="number" id="limit" name="limit" value="10" min="1" max="4000" />
+    </div>
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-primary" style="margin-bottom:2%;">Update</button>
+}
+<table class="table" id="nameRow">
+    <tr>
+        <th>
+            First name
+        </th>
+        <th>
+            Last name
+        </th>
+        <th>
+            Gender
+        </th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.FirstName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.LastName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Gender)
+            </td>
+        </tr>
+    }
+</table>
+<input type="button" class="btn btn-secondary" id="ajaxCall" value="Load more" />
+<script>
+    $(document).ready(() => {
+        $("#ajaxCall").click(() => {
+            let nameType = $('#nameType').val();
+            let nameGender = $('#nameGender').val();
+            let limit = $('#limit').val();
+
+            //Skickar AJAX POST request till controller metod med formulärdatans värden
+            $.ajax({
+                url: '/Service/AjaxRequest',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    nameType: nameType,
+                    nameGender: nameGender,
+                    limit: limit
+                },
+                success: (data) => {
+                    /*I success callback tas JSON arrayen emot och Gender property formateras med hjälp av
+                    array.map funktionen och pushas sedan in tillsammans med resterande properties till temp arrayen.
+                    Därefter printas properties till tabellen*/
+                    console.log(data);
+                    let mapping = { "0": "Both", "1": "Male", "2": "Female" };
+                    let formatted = data.map((name) => {
+                        return { 'Gender': mapping[name['Gender']] };
+                    });
+                    console.log(formatted);
+                    for (let i = 0; i < data.length; i++) {
+                        let temp = [];
+                        temp.push({
+                            FirstName: data[i].FirstName,
+                            LastName: data[i].LastName,
+                            Gender: formatted[i].Gender
+                        });
+                        for (let z = 0; z < temp.length; z++) {
+                            let el = $('#nameRow');
+                            el.append('<tr><td>' + $.trim(temp[z].FirstName) + '</td><td>' + $.trim(temp[z].LastName) + '</td><td>' + $.trim(temp[z].Gender) + '</td></tr>');
+                        }
+                    }
+                },
+                error: (error) => {
+                    console.log(error);
+                }
+            });
+        });
+    });
+
+</script>
